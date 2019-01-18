@@ -1,0 +1,31 @@
+THREADS: 32
+FILTER:
+  cutadapt:
+      adapter: AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC
+      quality-filter: 20
+      minimum-adapters-overlap: 6
+      minimum-length: 15
+      maximum-length: 40
+      extra-params:
+MAPPING:
+      #default
+      # -k 1 (default): Report up to <int> valid alignments per read
+      mode: "unique" # -m 1
+      missmatches: 0 # -v <int>
+      reference: "data/index/genome"
+
+# AGATCGGAAGAGC
+
+# Changed the Illumina small RNA sequence used for auto-detection to 'TGGAATTCTCGG' (from formerly 'ATGGAATTCTCG'). 
+# The reason for this is that smallRNA libraries have ssRNA adapters ligated to their -OH end, a signature of dicer cleavage, so there is no A-tailing involved. Thanks to Q. Gouil for bringing this to our attention
+# f ($nextera){
+# $adapter = 'CTGTCTCTTATA';
+# $adapter_name = 'Nextera Transposase sequence; user defined';
+# }
+# elsif($small_rna){
+# $adapter = 'TGGAATTCTCGG';
+# $adapter_name = 'Illumina small RNA adapter; user defined';
+# }
+# elsif($illumina){
+# $adapter = 'AGATCGGAAGAGC';
+# $adapter_name = 'Illumina TruSeq, Sanger iPCR; user defined';
