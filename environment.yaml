@@ -2,6 +2,7 @@ channels:
   - bioconda
 dependencies:
   - bowtie=1
+  - bowtie=2
   - fastqc
   - trim-galore
   - multiqc

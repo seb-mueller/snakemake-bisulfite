@@ -12,7 +12,9 @@ MAPPING:
       # -k 1 (default): Report up to <int> valid alignments per read
       mode: "unique" # -m 1
       missmatches: 0 # -v <int>
-      reference: "data/index/genome"
+      reference: "data/index/"
+      # used as short version to name output filnames for mapping
+      reference_short: "chloroplast"
 
 # AGATCGGAAGAGC
 
