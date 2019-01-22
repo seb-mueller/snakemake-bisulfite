@@ -7,7 +7,10 @@ import os
 
 # to make shell rule to work we need to determine the base path of Snakefile since we expect
 # the scripts directory there as well
+# TODO
+# -bismark crushes if -p 1. need to capture if no --cores or --cores 1
 SRCDIR = srcdir("")
+
 
 configfile: "config.yaml"
 missmatches =  config['MAPPING']['missmatches']
@@ -27,7 +30,7 @@ print("refbase")
 print(refbase)
 print(CONTEXT)
 print(SAMPLES)
-# threads     =  config['THREADS']
+print(PAIRS)
 #software requirements
 #fastqc
 #trim_galore (cutadapt)
@@ -40,20 +43,22 @@ print(SAMPLES)
 shell.executable("/bin/bash")
 shell.prefix("set -euo pipefail; ")
 
-# ruleorder: fastqc_raw > trim > alignment > methylation_extractor > bismark2bed
+# ruleorder: fastqc_raw > trim > bismark >deduplicate > sort > methylation_extractor > bismark2bedGraph
+# to make shell rule to work we need to determine the base path of Snakefile since we expect
 
 rule all:
     input:
-        expand("trimmed/{sample}_{pair}_trimmed.fq.gz", sample=SAMPLES.index, pair = PAIRS),
+        expand("trimmed/{sample}_{pair}_trim.fq.gz", sample=SAMPLES.index, pair = PAIRS),
         expand("logs/fastqc/raw/{sample}_{pair}_fastqc.html", sample=SAMPLES.index, pair = PAIRS),
         # expand("logs/fastqc/raw/{sample}_R2_fastqc.zip", sample=SAMPLES.index),
 
-        expand("mapped/{sample}_MappedOn_" + refbase +"_trimmed_bismark_pe.bam", sample=SAMPLES.index),
-        expand("mapped/{sample}_MappedOn_" + refbase +"_trimmed_bismark_pe.deduplicated.bam", sample=SAMPLES.index),
-        expand("mapped/{sample}_MappedOn_" + refbase +"_trimmed_bismark_pe.deduplicated.sorted.bam", sample=SAMPLES.index),
-        expand("methylation_extracted/CHH_context_{sample}_MappedOn_" + refbase +"_trimmed_bismark_pe.deduplicated.sorted.txt.gz", sample=SAMPLES.index),
-        expand("methylation_extracted/CHG_context_{sample}_MappedOn_" + refbase +"_trimmed_bismark_pe.deduplicated.sorted.txt.gz", sample=SAMPLES.index),
-        expand("methylation_extracted/CpG_context_{sample}_MappedOn_" + refbase +"_trimmed_bismark_pe.deduplicated.sorted.txt.gz", sample=SAMPLES.index),
+        expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.bam", sample=SAMPLES.index),
+        expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.bam", sample=SAMPLES.index),
+        expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.bam", sample=SAMPLES.index),
+        # expand("methylation_extracted/{context}_context_{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.txt.gz", sample=SAMPLES.index, context=CONTEXT),
+        expand("methylation_extracted/CHG_context_{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.txt.gz", sample=SAMPLES.index),
+        expand("methylation_extracted/CpG_context_{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.txt.gz", sample=SAMPLES.index),
+        expand("methylation_extracted/CHH_context_{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.txt.gz", sample=SAMPLES.index),
         # CHH="mapped/CHH_context_{sample}_MappedOn_{refbase}_trimmed_bismark_pe.deduplicated.sorted.bam",
         # expand("mapped/{sample}/{sample}_trimmed_bismark.deduplicated.sorted.bam.bai",sample=SAMPLES),
         # expand("mapped/{sample}/{sample}_trimmed_bismark.deduplicated.sorted.bam",sample=SAMPLES),
@@ -66,8 +71,11 @@ rule all:
 
         # expand("mapped/{sample}/{context}_context_{sample}_trimmed_bismark.deduplicated.sorted.txt.gz", sample=SAMPLES, context=CONTEXT),
 
-        # expand("mapped/{sample}/{sample}_{context}.gz.bismark.cov.gz", sample=SAMPLES,context=CONTEXT),
-        # expand("mapped/{sample}/{sample}_{context}.gz", sample=SAMPLES,context=CONTEXT),
+        # expand("methylation_extracted/{sample}_{context}.gz.bismark.cov.gz", sample=SAMPLES,context=CONTEXT),
+        # bedGraph="methylation_extracted/{sample}_{context}.gz",
+        # cov=     "mapped/{sample}/{sample}_{context}.gz.bismark.cov.gz",
+
+        # expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz", sample=SAMPLES.index, context=CONTEXT),
 
 rule fastqc_raw:
     """Create fastqc report"""
@@ -101,12 +109,12 @@ rule trim:
         "logs/cutadapt/{sample}_{pair}.log"
     output:
         # trim_galore alway seems to output fq indpendent of fq|fastq input
-        read="trimmed/{sample}_{pair}_trimmed.fq.gz",
+        read="trimmed/{sample}_{pair}_trim.fq.gz",
         # l1="trimmed/{sample}.fastq.gz_trimming_report.txt",
     shell:
         """
         trim_galore --paired --trim1 {input.read1} {input.read2} --output_dir trimmed
-        rename 's/val_[12]/trimmed/g' trimmed/*
+        rename 's/val_[12]/trim/g' trimmed/*
         """
 
 # trim_galore [options] <filename(s)>
@@ -122,10 +130,10 @@ rule trim:
 rule bismark:
     input:
         # read="trimmed/{sample}_trimmed.fq.gz",
-        read1="trimmed/{sample}_" + PAIRS[0] + "_trimmed.fq.gz",
-        read2="trimmed/{sample}_" + PAIRS[1] + "_trimmed.fq.gz",
+        read1="trimmed/{sample}_" + PAIRS[0] + "_trim.fq.gz",
+        read2="trimmed/{sample}_" + PAIRS[1] + "_trim.fq.gz",
     output:
-        bam="mapped/{sample}_MappedOn_{refbase}_trimmed_bismark_pe.bam",
+        bam="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.bam",
         # se="mapped/{sample}/{sample}_trimmed_bismark_SE_report.txt",
         # nuc="mapped/{sample}/{sample}_trimmed_bismark.nucleotide_stats.txt",
     log:
@@ -136,19 +144,19 @@ rule bismark:
     shell:
         # USAGE: bismark [options] <genome_folder> {-1 <mates1> -2 <mates2> | <singles>}
         """
-        bismark --bowtie2 -p {threads} --nucleotide_coverage {params.ref} -1 {input.read1} -2 {input.read2} --basename {wildcards.sample}_MappedOn_{refbase}_trimmed_bismark --output_dir mapped 2> {log}
+        bismark --bowtie2 -p {threads} --nucleotide_coverage {params.ref} -1 {input.read1} -2 {input.read2} --basename {wildcards.sample}_MappedOn_{refbase}_trim_bismark --output_dir mapped 2> {log}
         """
         # mapped/{wildcards.sample}
 
 
 rule deduplicate:
     input:
-        # bam="mapped/{sample}/{sample}_trimmed_bismark.bam",
-        bam="mapped/{sample}_MappedOn_{refbase}_trimmed_bismark_pe.bam",
+        # bam="mapped/{sample}/{sample}_trim_bismark.bam",
+        bam="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.bam",
     output:
-        # bam="mapped/{sample}/{sample}_trimmed_bismark.deduplicated.bam",
-        bam="mapped/{sample}_MappedOn_{refbase}_trimmed_bismark_pe.deduplicated.bam",
-        # dup="mapped/{sample}/{sample}_trimmed_bismark.deduplication_report.txt",
+        # bam="mapped/{sample}/{sample}_trim_bismark.deduplicated.bam",
+        bam="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.bam",
+        # dup="mapped/{sample}/{sample}_trim_bismark.deduplication_report.txt",
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}.deduplication.log",
     shell:
@@ -158,10 +166,10 @@ rule deduplicate:
 
 rule sort:
     input:
-        bam="mapped/{sample}_MappedOn_{refbase}_trimmed_bismark_pe.deduplicated.bam",
+        bam="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.bam",
     output:
-        sort="mapped/{sample}_MappedOn_{refbase}_trimmed_bismark_pe.deduplicated.sorted.bam",
-        index="mapped/{sample}_MappedOn_{refbase}_trimmed_bismark_pe.deduplicated.sorted.bam.bai",
+        sort="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bam",
+        index="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bam.bai",
     shell:
         """
         samtools sort {input.bam} > {output.sort}
@@ -181,19 +189,21 @@ rule sort:
 #	${bismark_dir}bismark2bedGraph --CX -o $*_fusedICv2_CHH.bedgraph $(files_CHH)
 #	${bismark_dir}bismark2bedGraph --CX -o $*_fusedICv2_CpG.bedgraph $(files_CpG)
 #	${bismark_dir}bismark2bedGraph --CX -o $*_fusedICv2_all.bedgraph $(files_CpG) $(files_CHH) $(files_CHG)
+
 rule methylation_extractor:
     # USAGE: bismark_methylation_extractor [options] <filenames>
     input:
-        bam="mapped/{sample}_MappedOn_{refbase}_trimmed_bismark_pe.deduplicated.sorted.bam",
+        bam="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bam",
     output:
-        CHH="methylation_extracted/CHH_context_{sample}_MappedOn_{refbase}_trimmed_bismark_pe.deduplicated.sorted.txt.gz",
-        CHG="methylation_extracted/CHG_context_{sample}_MappedOn_{refbase}_trimmed_bismark_pe.deduplicated.sorted.txt.gz",
-        CpG="methylation_extracted/CpG_context_{sample}_MappedOn_{refbase}_trimmed_bismark_pe.deduplicated.sorted.txt.gz",
-        # split="mapped/{sample}/{sample}_trimmed_bismark.deduplicated.sorted_splitting_report.txt",
-        # mbias="mapped/{sample}/{sample}_trimmed_bismark.deduplicated.sorted.M-bias.txt",
-        # cg="mapped/{sample}/CpG_context_{sample}_trimmed_bismark.deduplicated.sorted.txt.gz",
-        # chg="mapped/{sample}/CHG_context_{sample}_trimmed_bismark.deduplicated.sorted.txt.gz",
-        # chh="mapped/{sample}/CHH_context_{sample}_trimmed_bismark.deduplicated.sorted.txt.gz",
+        CHH="methylation_extracted/CHH_context_{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.txt.gz",
+        CHG="methylation_extracted/CHG_context_{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.txt.gz",
+        CpG="methylation_extracted/CpG_context_{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.txt.gz",
+        # "methylation_extracted/{CONTEXT}_context_{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.txt.gz",
+        # split="mapped/{sample}/{sample}_trim_bismark.deduplicated.sorted_splitting_report.txt",
+        # mbias="mapped/{sample}/{sample}_trim_bismark.deduplicated.sorted.M-bias.txt",
+        # cg="mapped/{sample}/CpG_context_{sample}_trim_bismark.deduplicated.sorted.txt.gz",
+        # chg="mapped/{sample}/CHG_context_{sample}_trim_bismark.deduplicated.sorted.txt.gz",
+        # chh="mapped/{sample}/CHH_context_{sample}_trim_bismark.deduplicated.sorted.txt.gz",
     params:
         ref=REFERENCE,
     threads: 4
@@ -204,13 +214,17 @@ rule methylation_extractor:
         bismark_methylation_extractor --paired-end --gzip --multicore {threads} --comprehensive --report --genome_folder {params.ref} --buffer_size 8G -s {input.bam} --output methylation_extracted 2> {log}
         """
 
-rule bismark2bed:
+rule bismark2bedGraph:
+    # bedGraph file as well as a coverage file which are both sorted by chromosomal position.
     input:
-        extract="mapped/{sample}/{context}_context_{sample}_trimmed_bismark.deduplicated.sorted.txt.gz",
+        # extract="mapped/{sample}/{context}_context_{sample}_trim_bismark.deduplicated.sorted.txt.gz",
+        methylex="methylation_extracted/{context}_context_{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.txt.gz",
     output:
-        bed="mapped/{sample}/{sample}_{context}.gz",
-        cgcov="mapped/{sample}/{sample}_{context}.gz.bismark.cov.gz",
+        bedGraph="coverage/{sample}_MappedOn_{refbase}_{context}.gz",
+        # cov=     "methylation_extracted/{sample}_MappedOn_{refbase}_{context}.gz.bismark.cov.gz",
+    log:
+        "logs/bismark/{sample}_MappedOn_{refbase}_{context}.bismark2bedGraph.log",
     shell:
         """
-        bismark2bedGraph --CX {input.extract} -o {wildcards.sample}_{wildcards.context} --dir mapped/{wildcards.sample}
+        bismark2bedGraph --CX {input.methylex} -o {wildcards.sample}_MappedOn_{refbase}_{wildcards.context} --dir coverage 2> {log}
         """
