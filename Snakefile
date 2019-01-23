@@ -77,8 +77,7 @@ rule all:
 
         expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz", sample=SAMPLES.index, context=CONTEXT),
         expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz.bismark.cov.gz", sample=SAMPLES.index, context=CONTEXT),
-
-        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz_CX_report.txt", sample=SAMPLES.index, context=CONTEXT),
+        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz.CX_report.txt", sample=SAMPLES.index, context=CONTEXT),
 
 rule fastqc_raw:
     """Create fastqc report"""
@@ -251,7 +250,7 @@ rule coverage2cytosine:
     shell:
         # genome_folder needs to contain fa rather than fasta!
         """
-        coverage2cytosine --CX --genome_folder {params.ref} -o {input.bedgraph} --dir coverage {input.bedGraph} 2> {log}
+        coverage2cytosine --CX --genome_folder {params.ref} -o {input.bedGraph} --dir . {input.bedGraph} 2> {log}
         """
 	# ${bismark_dir}coverage2cytosine --genome_folder ${index_bismarck} --CX -o $*_fusedICv2_all.cov2cyt $*_fusedICv2_all.bedgraph.gz.bismark.cov.gz
 	
