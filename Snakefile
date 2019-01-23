@@ -75,9 +75,10 @@ rule all:
         # bedGraph="methylation_extracted/{sample}_{context}.gz",
         # cov=     "mapped/{sample}/{sample}_{context}.gz.bismark.cov.gz",
 
-        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz", sample=SAMPLES.index, context=CONTEXT),
-        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz.bismark.cov.gz", sample=SAMPLES.index, context=CONTEXT),
-        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz.CX_report.txt", sample=SAMPLES.index, context=CONTEXT),
+        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}", sample=SAMPLES.index, context=CONTEXT),
+        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz.bismark.cov", sample=SAMPLES.index, context=CONTEXT),
+        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.CX_report.txt", sample=SAMPLES.index, context=CONTEXT),
+        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.bw", sample=SAMPLES.index, context=CONTEXT),
 
 rule fastqc_raw:
     """Create fastqc report"""
@@ -213,7 +214,7 @@ rule methylation_extractor:
         "logs/bismark/{sample}_MappedOn_{refbase}.methylation_extractor.log",
     shell:
         """
-        bismark_methylation_extractor --paired-end --gzip --multicore {threads} --comprehensive --report --genome_folder {params.ref} --buffer_size 8G -s {input.bam} --output methylation_extracted 2> {log}
+        bismark_methylation_extractor --gzip --paired-end --multicore {threads} --comprehensive --report --genome_folder {params.ref} --buffer_size 8G -s {input.bam} --output methylation_extracted 2> {log}
         """
 
 rule bismark2bedGraph:
@@ -222,13 +223,16 @@ rule bismark2bedGraph:
         # extract="mapped/{sample}/{context}_context_{sample}_trim_bismark.deduplicated.sorted.txt.gz",
         methylex="methylation_extracted/{context}_context_{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.txt.gz",
     output:
-        bedGraph="coverage/{sample}_MappedOn_{refbase}_{context}.gz",
-        cov=     "coverage/{sample}_MappedOn_{refbase}_{context}.gz.bismark.cov.gz",
+        bedGraph="coverage/{sample}_MappedOn_{refbase}_{context}",
+        cov=     "coverage/{sample}_MappedOn_{refbase}_{context}.gz.bismark.cov",
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}_{context}.bismark2bedGraph.log",
     shell:
+        # gzip outfiles even without --gzip option. Need to unzip manual for later bigwiggle rule
         """
         bismark2bedGraph --CX {input.methylex} -o {wildcards.sample}_MappedOn_{refbase}_{wildcards.context} --dir coverage 2> {log}
+        gunzip {output.bedGraph}.gz
+        gunzip {output.cov}.gz
         """
 
 rule coverage2cytosine:
@@ -240,9 +244,9 @@ rule coverage2cytosine:
     # otherwise be sorted by position and exactly in the following format:
     # USAGE: coverage2cytosine [options] --genome_folder <path> -o <output> [input]
     input:
-        bedGraph="coverage/{sample}_MappedOn_{refbase}_{context}.gz",
+        bedGraph="coverage/{sample}_MappedOn_{refbase}_{context}",
     output:
-        cov2cyt="coverage/{sample}_MappedOn_{refbase}_{context}.gz.CX_report.txt",
+        cov2cyt="coverage/{sample}_MappedOn_{refbase}_{context}.CX_report.txt",
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}_{context}.coverage2cytosine.log",
     params:
@@ -252,6 +256,31 @@ rule coverage2cytosine:
         """
         coverage2cytosine --CX --genome_folder {params.ref} -o {input.bedGraph} --dir . {input.bedGraph} 2> {log}
         """
+
+rule bedGraphToBigWig:
+    # usage:
+    #    bedGraphToBigWig in.bedGraph chrom.sizes out.bw
+    # where in.bedGraph is a four column file in the format:
+    #       <chrom> <start> <end> <value>
+    # and chrom.sizes is a two-column file/URL: <chromosome name> <size in bases>
+    # and out.bw is the output indexed big wig file.
+    input:
+        bedGraph="coverage/{sample}_MappedOn_{refbase}_{context}",
+    output:
+        bw="coverage/{sample}_MappedOn_{refbase}_{context}.bw",
+    log:
+        "logs/bismark/{sample}_MappedOn_{refbase}_{context}.bedGraphToBigWig.log",
+    params:
+        ref=REFERENCE,
+    shell:
+        # fai files needs to be present to serve as chrom.sizes and can be created by:
+        # samtools faidx input.fa
+        # cut -f1,2 input.fa.fai > sizes.genome
+        """
+        bedGraphToBigWig {input.bedGraph} {params.ref}{refbase}.fa.fai {input.bedGraph}.bw 2> {log}
+        """
+
+
 	# ${bismark_dir}coverage2cytosine --genome_folder ${index_bismarck} --CX -o $*_fusedICv2_all.cov2cyt $*_fusedICv2_all.bedgraph.gz.bismark.cov.gz
 	
 	# gunzip $*_fusedICv2_CHG.bedgraph.gz $*_fusedICv2_CpG.bedgraph.gz $*_fusedICv2_CHH.bedgraph.gz

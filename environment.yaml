@@ -11,3 +11,4 @@ dependencies:
   - python > 3
   - pandas
   - cutadapt
+  - ucsc-bedgraphtobigwig
