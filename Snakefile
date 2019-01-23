@@ -13,10 +13,10 @@ SRCDIR = srcdir("")
 
 
 configfile: "config.yaml"
-missmatches =  config['MAPPING']['missmatches']
+# missmatches =  config['MAPPING']['missmatches']
 REFERENCE   =  config['MAPPING']['reference']
 refbase     =  config['MAPPING']['reference_short']
-mode        =  config['MAPPING']['mode']
+# mode        =  config['MAPPING']['mode']
 
 CONTEXT = ['CpG','CHG','CHH']
 PAIRS = ['R1', 'R2']
