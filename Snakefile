@@ -75,7 +75,10 @@ rule all:
         # bedGraph="methylation_extracted/{sample}_{context}.gz",
         # cov=     "mapped/{sample}/{sample}_{context}.gz.bismark.cov.gz",
 
-        # expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz", sample=SAMPLES.index, context=CONTEXT),
+        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz", sample=SAMPLES.index, context=CONTEXT),
+        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz.bismark.cov.gz", sample=SAMPLES.index, context=CONTEXT),
+
+        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz_CX_report.txt", sample=SAMPLES.index, context=CONTEXT),
 
 rule fastqc_raw:
     """Create fastqc report"""
@@ -221,10 +224,39 @@ rule bismark2bedGraph:
         methylex="methylation_extracted/{context}_context_{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.txt.gz",
     output:
         bedGraph="coverage/{sample}_MappedOn_{refbase}_{context}.gz",
-        # cov=     "methylation_extracted/{sample}_MappedOn_{refbase}_{context}.gz.bismark.cov.gz",
+        cov=     "coverage/{sample}_MappedOn_{refbase}_{context}.gz.bismark.cov.gz",
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}_{context}.bismark2bedGraph.log",
     shell:
         """
         bismark2bedGraph --CX {input.methylex} -o {wildcards.sample}_MappedOn_{refbase}_{wildcards.context} --dir coverage 2> {log}
         """
+
+rule coverage2cytosine:
+    # generates a cytosine methylation report for a genome of interest and a sorted methylation input file produced
+    # by the script bismark2bedGraph or the bismark_methylation_extractor when '--bedGraph' was specified. The input files
+    # (.cov or .cov.gz) are expected to use 1-based genomic coordinates. By default, the output uses 1-based chromosomal coordinates
+    # and reports CpG positions only (for both strands individually and not merged in any way). 
+    # The input file needs to have been generated with the script bismark2bedGraph (the file is called *.cov, or .cov.gz) or
+    # otherwise be sorted by position and exactly in the following format:
+    # USAGE: coverage2cytosine [options] --genome_folder <path> -o <output> [input]
+    input:
+        bedGraph="coverage/{sample}_MappedOn_{refbase}_{context}.gz",
+    output:
+        cov2cyt="coverage/{sample}_MappedOn_{refbase}_{context}.gz.CX_report.txt",
+    log:
+        "logs/bismark/{sample}_MappedOn_{refbase}_{context}.coverage2cytosine.log",
+    params:
+        ref=REFERENCE,
+    shell:
+        # genome_folder needs to contain fa rather than fasta!
+        """
+        coverage2cytosine --CX --genome_folder {params.ref} -o {input.bedgraph} --dir coverage {input.bedGraph} 2> {log}
+        """
+	# ${bismark_dir}coverage2cytosine --genome_folder ${index_bismarck} --CX -o $*_fusedICv2_all.cov2cyt $*_fusedICv2_all.bedgraph.gz.bismark.cov.gz
+	
+	# gunzip $*_fusedICv2_CHG.bedgraph.gz $*_fusedICv2_CpG.bedgraph.gz $*_fusedICv2_CHH.bedgraph.gz
+	# ${bedGraphToBigWig} $*_fusedICv2_CpG.bedgraph  ${chromsizes} $*_fusedICv2_CpG.bw
+	# ${bedGraphToBigWig} $*_fusedICv2_CHH.bedgraph  ${chromsizes} $*_fusedICv2_CHH.bw
+	# ${bedGraphToBigWig} $*_fusedICv2_CHG.bedgraph  ${chromsizes} $*_fusedICv2_CHG.bw
+	# rm $*_fusedICv2_CHG.bedgraph $*_fusedICv2_CpG.bedgraph $*_fusedICv2_CHH.bedgraph
