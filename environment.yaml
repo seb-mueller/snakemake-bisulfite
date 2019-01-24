@@ -12,3 +12,4 @@ dependencies:
   - pandas
   - cutadapt
   - ucsc-bedgraphtobigwig
+  - deeptools>=3

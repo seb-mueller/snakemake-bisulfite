@@ -48,14 +48,19 @@ shell.prefix("set -euo pipefail; ")
 
 rule all:
     input:
+        # trimming
         expand("trimmed/{sample}_{pair}_trim.fq.gz", sample=SAMPLES.index, pair = PAIRS),
+        # QC
         expand("logs/fastqc/raw/{sample}_{pair}_fastqc.html", sample=SAMPLES.index, pair = PAIRS),
-        # expand("logs/fastqc/raw/{sample}_R2_fastqc.zip", sample=SAMPLES.index),
-
+        # bismark mapping
         expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.bam", sample=SAMPLES.index),
+        # deduplication
         expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.bam", sample=SAMPLES.index),
+        # sorting
         expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.bam", sample=SAMPLES.index),
-        # expand("methylation_extracted/{context}_context_{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.txt.gz", sample=SAMPLES.index, context=CONTEXT),
+        expand("mapped/bws/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.bw", sample=SAMPLES.index),
+        # "mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bw",
+        # extracting methyl for all 3 contexts
         expand("methylation_extracted/CHG_context_{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.txt.gz", sample=SAMPLES.index),
         expand("methylation_extracted/CpG_context_{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.txt.gz", sample=SAMPLES.index),
         expand("methylation_extracted/CHH_context_{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.txt.gz", sample=SAMPLES.index),
@@ -179,12 +184,27 @@ rule sort:
         samtools index {output.sort}
         """
 
+rule calccoverage:
+    """compute coverage using deeptools into bigWig(bw) file"""
+    input:
+        bam="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bam",
+        bai="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bam.bai",
+    output:
+        "mapped/bws/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bw",
+    params:
+        binsize="50"
+    threads: 8
+    shell:
+        """
+        bamCoverage -b {input.bam} -o {output}  --normalizeUsing CPM --binSize {params.binsize} -p {threads}
+        """
+
 #%_fusedICv2_all.cov2cyt: %_fusedICv2_pe.bam
 #	#not doing --bedgraph option since the filenames are messed up, doing this manualy
 #	#p stands for paired end
 #	${bismark_dir}/bismark_methylation_extractor -p --no_overlap --ample_memory --ignore_r2 2 --report --multicore $(threads) $?
 #	${bismark_dir}/bismark_methylation_extractor -s --ample_memory --report --multicore $(threads) $*_fusedICv2_unmapped_reads.bam
-	
+
 #	$(eval files_CHG = CHG_OB_$*_fusedICv2_pe.txt CHG_OT_$*_fusedICv2_pe.txt CHG_OB_$*_fusedICv2_unmapped_reads.txt CHG_OT_$*_fusedICv2_unmapped_reads.txt)
 #	$(eval files_CHH = CHH_OB_$*_fusedICv2_pe.txt CHH_OT_$*_fusedICv2_pe.txt CHH_OB_$*_fusedICv2_unmapped_reads.txt CHH_OT_$*_fusedICv2_unmapped_reads.txt)
 #	$(eval files_CpG = CpG_OB_$*_fusedICv2_pe.txt CpG_OT_$*_fusedICv2_pe.txt CpG_OB_$*_fusedICv2_unmapped_reads.txt CpG_OT_$*_fusedICv2_unmapped_reads.txt)
@@ -239,7 +259,7 @@ rule coverage2cytosine:
     # generates a cytosine methylation report for a genome of interest and a sorted methylation input file produced
     # by the script bismark2bedGraph or the bismark_methylation_extractor when '--bedGraph' was specified. The input files
     # (.cov or .cov.gz) are expected to use 1-based genomic coordinates. By default, the output uses 1-based chromosomal coordinates
-    # and reports CpG positions only (for both strands individually and not merged in any way). 
+    # and reports CpG positions only (for both strands individually and not merged in any way).
     # The input file needs to have been generated with the script bismark2bedGraph (the file is called *.cov, or .cov.gz) or
     # otherwise be sorted by position and exactly in the following format:
     # USAGE: coverage2cytosine [options] --genome_folder <path> -o <output> [input]
@@ -277,12 +297,12 @@ rule bedGraphToBigWig:
         # samtools faidx input.fa
         # cut -f1,2 input.fa.fai > sizes.genome
         """
-        bedGraphToBigWig {input.bedGraph} {params.ref}{refbase}.fa.fai {input.bedGraph}.bw 2> {log}
+        bedGraphToBigWig {input.bedGraph} {params.ref}/{refbase}.fa.fai {input.bedGraph}.bw 2> {log}
         """
 
 
 	# ${bismark_dir}coverage2cytosine --genome_folder ${index_bismarck} --CX -o $*_fusedICv2_all.cov2cyt $*_fusedICv2_all.bedgraph.gz.bismark.cov.gz
-	
+
 	# gunzip $*_fusedICv2_CHG.bedgraph.gz $*_fusedICv2_CpG.bedgraph.gz $*_fusedICv2_CHH.bedgraph.gz
 	# ${bedGraphToBigWig} $*_fusedICv2_CpG.bedgraph  ${chromsizes} $*_fusedICv2_CpG.bw
 	# ${bedGraphToBigWig} $*_fusedICv2_CHH.bedgraph  ${chromsizes} $*_fusedICv2_CHH.bw
