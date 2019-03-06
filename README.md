@@ -39,12 +39,25 @@ To `deactivate` the environment, run:
 ```
 source deactivate
 ```
+# Genome preparation:
 
-# Update:
+The pipeline requires a bismark index file which might have to be created at first.
+This best done having the reference genome as fasta file located in a directory by itself (there shouldn't be any other fasta files since bismark works in mysterious ways and you can't specify a conrete file, just the directory).
+
+Say our genome is located here: `ref/genome/mygenome.fa` with no other fa files in it.
+Run bismark indexer which will create a folder within that:
+
 ```
-git pull
-conda env update --file environment.yaml --name bsseq_pipeline
+bismark_genome_preparation ref/genome 
 ```
+This will create `ref/genome/Bisulfite_Genome`.
+To let the pipeline know where the index is located, change the `config.yaml`:
+
+```
+  reference: "ref/genome/"
+  reference_short: "mygenome"
+```
+
 # Usage:
 
 Navigate in a Unix shell to the base directory contains the files listed above plus the `data` directory including the data like int this example:
@@ -249,4 +262,10 @@ Below is the structure of all generated files once the pipeline is finished:
     ├── bsseq_sample2_R2.fastq.gz_trimming_report.txt
     ├── bsseq_sample2_R2_trim.fq.gz
     └── bsseq_sample2_R2_val_2.fq.gz
+```
+
+# Update pipeline/environment:
+```
+git pull
+conda env update --file environment.yaml --name bsseq_pipeline
 ```
