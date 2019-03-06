@@ -29,10 +29,10 @@ wget https://raw.githubusercontent.com/seb-mueller/snakemake_sRNAseq/master/Snak
 conda env create --file environment.yaml --name bsseq_pipeline
 ```
 
-# activate 
+# activate
 
 ```
-source activate srna_mapping
+source activate bsseq_pipeline
 ```
 To `deactivate` the environment, run:
 
@@ -43,28 +43,41 @@ source deactivate
 # Update:
 ```
 git pull
-conda env update --file environment.yaml --name srna_mapping
+conda env update --file environment.yaml --name bsseq_pipeline
 ```
 # Usage:
 
 Navigate in a Unix shell to the base directory contains the files listed above plus the `data` directory including the data like int this example:
 
 ```
+
 .
-├── data
-│   ├── test2_R1.fastq.gz
-│   └── test3_R1.fastq.gz
+├── bsseq.makefile
 ├── config.yaml
+├── data
+│   ├── bsseq_sample1_R1.fastq.gz
+│   ├── bsseq_sample1_R2.fastq.gz
+│   ├── bsseq_sample2_R1.fastq.gz
+│   └── bsseq_sample2_R2.fastq.gz
 ├── environment.yaml
+├── README.md
 ├── samples.csv
 └── Snakefile
+
+```
+
+The `sample.csv` could look something like this:
+```
+library,optional_info
+bsseq_sample1,WT
+bsseq_sample2,Mutant
 ```
 
 Then just run snakmake in base directory:
 
 
 ```
-snakemake 
+snakemake
 ```
 ## useful parameters:
 - `--cores` max number of threads
@@ -73,7 +86,7 @@ snakemake
 - `--use-conda`
 - `--conda-prefix ~/.myconda`
 - `--forcerun postmapping` forces rerun of a given rule (e.g. `postmapping`)
- 
+
 
 # Output:
 
