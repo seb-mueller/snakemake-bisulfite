@@ -92,3 +92,161 @@ snakemake
 
 `trimmed`, `log` and `mapped` directory with trimming and mapping results.
 
+Below is the structure of all generated files once the pipeline is finished:
+```
+.
+├── config.yaml
+├── coverage
+│   ├── bseq_sample2_MappedOn_chloroplast_CHH.gz
+│   ├── bseq_sample2_MappedOn_chloroplast_CHH.gz.bismark.cov.gz
+│   ├── bsseq_sample1_MappedOn_chloroplast_CHG
+│   ├── bsseq_sample1_MappedOn_chloroplast_CHG.bw
+│   ├── bsseq_sample1_MappedOn_chloroplast_CHG.CX_report.txt
+│   ├── bsseq_sample1_MappedOn_chloroplast_CHG.gz.bismark.cov
+│   ├── bsseq_sample1_MappedOn_chloroplast_CHH
+│   ├── bsseq_sample1_MappedOn_chloroplast_CHH.bw
+│   ├── bsseq_sample1_MappedOn_chloroplast_CHH.CX_report.txt
+│   ├── bsseq_sample1_MappedOn_chloroplast_CHH.gz.bismark.cov
+│   ├── bsseq_sample1_MappedOn_chloroplast_CpG
+│   ├── bsseq_sample1_MappedOn_chloroplast_CpG.bw
+│   ├── bsseq_sample1_MappedOn_chloroplast_CpG.CX_report.txt
+│   ├── bsseq_sample1_MappedOn_chloroplast_CpG.gz.bismark.cov
+│   ├── bsseq_sample2_MappedOn_chloroplast_CHG
+│   ├── bsseq_sample2_MappedOn_chloroplast_CHG.bw
+│   ├── bsseq_sample2_MappedOn_chloroplast_CHG.CX_report.txt
+│   ├── bsseq_sample2_MappedOn_chloroplast_CHG.gz.bismark.cov
+│   ├── bsseq_sample2_MappedOn_chloroplast_CHH
+│   ├── bsseq_sample2_MappedOn_chloroplast_CHH.bw
+│   ├── bsseq_sample2_MappedOn_chloroplast_CHH.CX_report.txt
+│   ├── bsseq_sample2_MappedOn_chloroplast_CHH.gz.bismark.cov
+│   ├── bsseq_sample2_MappedOn_chloroplast_CpG
+│   ├── bsseq_sample2_MappedOn_chloroplast_CpG.bw
+│   ├── bsseq_sample2_MappedOn_chloroplast_CpG.CX_report.txt
+│   └── bsseq_sample2_MappedOn_chloroplast_CpG.gz.bismark.cov
+├── data
+│   ├── bsseq_sample1_R1.fastq.gz
+│   ├── bsseq_sample1_R2.fastq.gz
+│   ├── bsseq_sample2_R1.fastq.gz
+│   ├── bsseq_sample2_R2.fastq.gz
+│   └── index
+│       ├── Bisulfite_Genome
+│       │   ├── CT_conversion
+│       │   │   ├── BS_CT.1.bt2
+│       │   │   ├── BS_CT.2.bt2
+│       │   │   ├── BS_CT.3.bt2
+│       │   │   ├── BS_CT.4.bt2
+│       │   │   ├── BS_CT.rev.1.bt2
+│       │   │   ├── BS_CT.rev.2.bt2
+│       │   │   └── genome_mfa.CT_conversion.fa
+│       │   └── GA_conversion
+│       │       ├── BS_GA.1.bt2
+│       │       ├── BS_GA.2.bt2
+│       │       ├── BS_GA.3.bt2
+│       │       ├── BS_GA.4.bt2
+│       │       ├── BS_GA.rev.1.bt2
+│       │       ├── BS_GA.rev.2.bt2
+│       │       └── genome_mfa.GA_conversion.fa
+│       ├── chloroplast.fa
+│       ├── chloroplast.fa.fai
+│       └── genomic_nucleotide_frequencies.txt
+├── environment.yaml
+├── logs
+│   ├── bismark
+│   │   ├── bsseq_sample1.
+│   │   ├── bsseq_sample1_CHG_MappedOn_chloroplast.methylation_extractor.log
+│   │   ├── bsseq_sample1_CHH_MappedOn_chloroplast.methylation_extractor.log
+│   │   ├── bsseq_sample1_CpG_MappedOn_chloroplast.methylation_extractor.log
+│   │   ├── bsseq_sample1.log
+│   │   ├── bsseq_sample1_MappedOn_chloroplast_CHG.bedGraphToBigWig.log
+│   │   ├── bsseq_sample1_MappedOn_chloroplast_CHG.bismark2bedGraph.log
+│   │   ├── bsseq_sample1_MappedOn_chloroplast_CHG.coverage2cytosine.log
+│   │   ├── bsseq_sample1_MappedOn_chloroplast_CHH.bedGraphToBigWig.log
+│   │   ├── bsseq_sample1_MappedOn_chloroplast_CHH.bismark2bedGraph.log
+│   │   ├── bsseq_sample1_MappedOn_chloroplast_CHH.coverage2cytosine.log
+│   │   ├── bsseq_sample1_MappedOn_chloroplast_CpG.bedGraphToBigWig.log
+│   │   ├── bsseq_sample1_MappedOn_chloroplast_CpG.bismark2bedGraph.log
+│   │   ├── bsseq_sample1_MappedOn_chloroplast_CpG.coverage2cytosine.log
+│   │   ├── bsseq_sample1_MappedOn_chloroplast.deduplication.log
+│   │   ├── bsseq_sample1_MappedOn_chloroplast.log
+│   │   ├── bsseq_sample1_MappedOn_chloroplast.methylation_extractor.log
+│   │   ├── bsseq_sample2_CHG_MappedOn_chloroplast.methylation_extractor.log
+│   │   ├── bsseq_sample2_CHH_MappedOn_chloroplast.methylation_extractor.log
+│   │   ├── bsseq_sample2_CpG_MappedOn_chloroplast.methylation_extractor.log
+│   │   ├── bsseq_sample2.log
+│   │   ├── bsseq_sample2_MappedOn_chloroplast_CHG.bedGraphToBigWig.log
+│   │   ├── bsseq_sample2_MappedOn_chloroplast_CHG.bismark2bedGraph.log
+│   │   ├── bsseq_sample2_MappedOn_chloroplast_CHG.coverage2cytosine.log
+│   │   ├── bsseq_sample2_MappedOn_chloroplast_CHH.bedGraphToBigWig.log
+│   │   ├── bsseq_sample2_MappedOn_chloroplast_CHH.bismark2bedGraph.log
+│   │   ├── bsseq_sample2_MappedOn_chloroplast_CHH.coverage2cytosine.log
+│   │   ├── bsseq_sample2_MappedOn_chloroplast_CpG.bedGraphToBigWig.log
+│   │   ├── bsseq_sample2_MappedOn_chloroplast_CpG.bismark2bedGraph.log
+│   │   ├── bsseq_sample2_MappedOn_chloroplast_CpG.coverage2cytosine.log
+│   │   ├── bsseq_sample2_MappedOn_chloroplast.deduplication.log
+│   │   ├── bsseq_sample2_MappedOn_chloroplast.log
+│   │   └── bsseq_sample2_MappedOn_chloroplast.methylation_extractor.log
+│   ├── cutadapt
+│   │   ├── bsseq_sample1_R1.log
+│   │   ├── bsseq_sample1_R2.log
+│   │   ├── bsseq_sample2_R1.log
+│   │   └── bsseq_sample2_R2.log
+│   └── fastqc
+│       └── raw
+│           ├── bsseq_sample1_R1_fastqc.html
+│           ├── bsseq_sample1_R1_fastqc.zip
+│           ├── bsseq_sample1_R2_fastqc.html
+│           ├── bsseq_sample1_R2_fastqc.zip
+│           ├── bsseq_sample2_R1_fastqc.html
+│           ├── bsseq_sample2_R1_fastqc.zip
+│           ├── bsseq_sample2_R2_fastqc.html
+│           └── bsseq_sample2_R2_fastqc.zip
+├── mapped
+│   ├── bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.bam
+│   ├── bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.deduplicated.bam
+│   ├── bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.bam
+│   ├── bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.bam.bai
+│   ├── bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.bw
+│   ├── bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.deduplication_report.txt
+│   ├── bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.nucleotide_stats.txt
+│   ├── bsseq_sample1_MappedOn_chloroplast_trim_bismark_PE_report.txt
+│   ├── bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.bam
+│   ├── bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.bam
+│   ├── bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.bam
+│   ├── bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.bam.bai
+│   ├── bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.bw
+│   ├── bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplication_report.txt
+│   ├── bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.nucleotide_stats.txt
+│   ├── bsseq_sample2_MappedOn_chloroplast_trim_bismark_PE_report.txt
+│   ├── bws
+│   │   ├── bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.bw
+│   │   └── bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.bw
+│   └── test
+├── methylation_extracted
+│   ├── bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.M-bias.txt
+│   ├── bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted_splitting_report.txt
+│   ├── bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.M-bias.txt
+│   ├── bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted_splitting_report.txt
+│   ├── CHG_context_bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.txt.gz
+│   ├── CHG_context_bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.txt
+│   ├── CHG_context_bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.txt.gz
+│   ├── CHH_context_bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.txt.gz
+│   ├── CHH_context_bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.txt
+│   ├── CHH_context_bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.txt.gz
+│   ├── CpG_context_bsseq_sample1_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.txt.gz
+│   ├── CpG_context_bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.txt
+│   └── CpG_context_bsseq_sample2_MappedOn_chloroplast_trim_bismark_pe.deduplicated.sorted.txt.gz
+├── README.md
+├── samples.csv
+├── Snakefile
+└── trimmed
+    ├── bsseq_sample1_R1.fastq.gz_trimming_report.txt
+    ├── bsseq_sample1_R1_trim.fq.gz
+    ├── bsseq_sample1_R2.fastq.gz_trimming_report.txt
+    ├── bsseq_sample1_R2_trim.fq.gz
+    ├── bsseq_sample2_R1.fastq.gz_trimming_report.txt
+    ├── bsseq_sample2_R1_trim.fq.gz
+    ├── bsseq_sample2_R1_val_1.fq.gz
+    ├── bsseq_sample2_R2.fastq.gz_trimming_report.txt
+    ├── bsseq_sample2_R2_trim.fq.gz
+    └── bsseq_sample2_R2_val_2.fq.gz
+```
