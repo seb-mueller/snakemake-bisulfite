@@ -16,7 +16,7 @@ Snakemake workflow for processing small RNA-seq libaries produced by Illumina sm
     The above files can be downloaded as a whole by cloning the repository (which requires git):
 
 ```
-git clone https://github.com/seb-mueller/snakemake_sRNAseq.git
+git clone https://github.com/seb-mueller/snakemake-bisulfite
 ```
 Or individually for example the `Snakemake` file using `wget`:
 
