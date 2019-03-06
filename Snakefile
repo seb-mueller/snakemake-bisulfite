@@ -196,7 +196,7 @@ rule calccoverage:
     threads: 8
     shell:
         """
-        bamCoverage -b {input.bam} -o {output}  --normalizeUsing CPM --binSize {params.binsize} -p {threads}
+        bamCoverage -b {input.bam} -o {output}  --binSize {params.binsize} -p {threads}
         """
 
 #%_fusedICv2_all.cov2cyt: %_fusedICv2_pe.bam
