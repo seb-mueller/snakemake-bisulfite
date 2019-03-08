@@ -16,6 +16,8 @@ configfile: "config.yaml"
 # missmatches =  config['MAPPING']['missmatches']
 REFERENCE   =  config['MAPPING']['reference']
 refbase     =  config['MAPPING']['reference_short']
+extra_params_bismark = config['MAPPING']['params_bismark']
+extra_params_trim = config['FILTER']['params_trim']
 # mode        =  config['MAPPING']['mode']
 
 CONTEXT = ['CpG','CHG','CHH']
@@ -115,13 +117,15 @@ rule trim:
     #     " -M " + str(config['FILTER']['cutadapt']['maximum-length'])
     log:
         "logs/cutadapt/{sample}_{pair}.log"
+    params:
+        extra=extra_params_trim,
     output:
         # trim_galore alway seems to output fq indpendent of fq|fastq input
         read="trimmed/{sample}_{pair}_trim.fq.gz",
         # l1="trimmed/{sample}.fastq.gz_trimming_report.txt",
     shell:
         """
-        trim_galore --paired --trim1 {input.read1} {input.read2} --output_dir trimmed
+        trim_galore {params.extra} --paired --trim1 {input.read1} {input.read2} --output_dir trimmed
         rename 's/val_[12]/trim/g' trimmed/*
         """
 
@@ -148,11 +152,12 @@ rule bismark:
         "logs/bismark/{sample}_MappedOn_{refbase}.log",
     params:
         ref=REFERENCE,
+        extra=extra_params_bismark,
     threads: 4
     shell:
         # USAGE: bismark [options] <genome_folder> {-1 <mates1> -2 <mates2> | <singles>}
         """
-        bismark --bowtie2 -p {threads} --nucleotide_coverage {params.ref} -1 {input.read1} -2 {input.read2} --basename {wildcards.sample}_MappedOn_{refbase}_trim_bismark --output_dir mapped 2> {log}
+        bismark {params.extra} --bowtie2 -p {threads} --nucleotide_coverage {params.ref} -1 {input.read1} -2 {input.read2} --basename {wildcards.sample}_MappedOn_{refbase}_trim_bismark --output_dir mapped 2> {log}
         """
         # mapped/{wildcards.sample}
 
