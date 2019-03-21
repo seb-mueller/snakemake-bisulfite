@@ -55,9 +55,9 @@ rule all:
         # QC
         expand("logs/fastqc/raw/{sample}_{pair}_fastqc.html", sample=SAMPLES.index, pair = PAIRS),
         # bismark mapping
-        expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.bam", sample=SAMPLES.index),
+        # expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.bam", sample=SAMPLES.index),
         # deduplication
-        expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.bam", sample=SAMPLES.index),
+        # expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.bam", sample=SAMPLES.index),
         # sorting
         expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.bam", sample=SAMPLES.index),
         expand("mapped/bws/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.bw", sample=SAMPLES.index),
@@ -85,7 +85,7 @@ rule all:
         expand("coverage/{sample}_MappedOn_" + refbase + "_{context}", sample=SAMPLES.index, context=CONTEXT),
         expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz.bismark.cov", sample=SAMPLES.index, context=CONTEXT),
         expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.CX_report.txt", sample=SAMPLES.index, context=CONTEXT),
-        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.bw", sample=SAMPLES.index, context=CONTEXT),
+        expand("coverage/bws/{sample}_MappedOn_" + refbase + "_{context}.bw", sample=SAMPLES.index, context=CONTEXT),
 
 rule fastqc_raw:
     """Create fastqc report"""
@@ -145,7 +145,7 @@ rule bismark:
         read1="trimmed/{sample}_" + PAIRS[0] + "_trim.fq.gz",
         read2="trimmed/{sample}_" + PAIRS[1] + "_trim.fq.gz",
     output:
-        bam="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.bam",
+        bam=temp("mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.bam"),
         # se="mapped/{sample}/{sample}_trimmed_bismark_SE_report.txt",
         # nuc="mapped/{sample}/{sample}_trimmed_bismark.nucleotide_stats.txt",
     log:
@@ -168,7 +168,7 @@ rule deduplicate:
         bam="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.bam",
     output:
         # bam="mapped/{sample}/{sample}_trim_bismark.deduplicated.bam",
-        bam="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.bam",
+        bam=temp("mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.bam"),
         # dup="mapped/{sample}/{sample}_trim_bismark.deduplication_report.txt",
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}.deduplication.log",
@@ -292,7 +292,7 @@ rule bedGraphToBigWig:
     input:
         bedGraph="coverage/{sample}_MappedOn_{refbase}_{context}",
     output:
-        bw="coverage/{sample}_MappedOn_{refbase}_{context}.bw",
+        bw="coverage/bws/{sample}_MappedOn_{refbase}_{context}.bw",
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}_{context}.bedGraphToBigWig.log",
     params:
@@ -302,9 +302,10 @@ rule bedGraphToBigWig:
         # samtools faidx input.fa
         # cut -f1,2 input.fa.fai > sizes.genome
         """
-        bedGraphToBigWig {input.bedGraph} {params.ref}/{refbase}.fa.fai {input.bedGraph}.bw 2> {log}
+        sed 1d {input.bedGraph} | sort -k1,1 -k2,2n > {input.bedGraph}_sorted
+        bedGraphToBigWig {input.bedGraph}_sorted {params.ref}/{refbase}.fa.fai {output} 2> {log}
+        rm {input.bedGraph}_sorted
         """
-
 
 	# ${bismark_dir}coverage2cytosine --genome_folder ${index_bismarck} --CX -o $*_fusedICv2_all.cov2cyt $*_fusedICv2_all.bedgraph.gz.bismark.cov.gz
 

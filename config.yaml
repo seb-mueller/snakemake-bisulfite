@@ -1,9 +1,9 @@
 THREADS: 4
 FILTER:
   # adapter: AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC
-  extra_params_trim:
+  params_trim:
 MAPPING:
-  extra_params_bismark:
+  params_bismark:
   reference: "data/index/"
   # used as short version to name output filnames for mapping
   reference_short: "chloroplast"
