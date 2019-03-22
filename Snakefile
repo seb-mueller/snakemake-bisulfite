@@ -13,33 +13,29 @@ SRCDIR = srcdir("")
 
 
 configfile: "config.yaml"
-# missmatches =  config['MAPPING']['missmatches']
-REFERENCE   =  config['MAPPING']['reference']
-refbase     =  config['MAPPING']['reference_short']
-extra_params_bismark = config['MAPPING']['params_bismark']
-extra_params_trim = config['FILTER']['params_trim']
-# mode        =  config['MAPPING']['mode']
+REFERENCE                      = config['MAPPING']['reference']
+refbase                        = config['MAPPING']['reference_short']
+extra_params_bismark           = config['MAPPING']['extra_params_bismark']
+extra_params_trim              = config['FILTER']['extra_params_trim']
+BINSIZE                        = config['REPORT']['binsize']
+extra_params_bamCoverage       = config['REPORT']['extra_params_bamCoverage']
+extra_params_meth_extractor    = config['REPORT']['extra_params_meth_extractor']
+extra_params_bismark2bedGraph  = config['REPORT']['extra_params_bismark2bedGraph']
+extra_params_coverage2cytosine = config['REPORT']['extra_params_coverage2cytosine']
 
 CONTEXT = ['CpG','CHG','CHH']
 PAIRS = ['R1', 'R2']
 
 # Get sample names from samples.csv
 SAMPLES = pd.read_table("samples.csv", header=0, sep=',', index_col=0)
+# an alternative approach would be globing for filenames (but I like specifying files more):
 # SAMPLES = glob_wildcards("data/{S}_R1.fastq.gz").S
-# print("My samples:")
 print(REFERENCE)
 print("refbase")
 print(refbase)
 print(CONTEXT)
 print(SAMPLES)
 print(PAIRS)
-#software requirements
-#fastqc
-#trim_galore (cutadapt)
-#samtools
-#bismark
-#bowtie1
-
 
 #bash safe mode
 shell.executable("/bin/bash")
@@ -86,6 +82,15 @@ rule all:
         expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz.bismark.cov", sample=SAMPLES.index, context=CONTEXT),
         expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.CX_report.txt", sample=SAMPLES.index, context=CONTEXT),
         expand("coverage/bws/{sample}_MappedOn_" + refbase + "_{context}.bw", sample=SAMPLES.index, context=CONTEXT),
+
+
+# this rule is suitable if only mapping is required
+# for example for mapping against lambda phage or mitochondrion to test for conversion
+# the converstion rates are reported in the log/bismark folder
+# call: snakemake map
+rule map:
+    input:
+        expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.bam", sample=SAMPLES.index),
 
 rule fastqc_raw:
     """Create fastqc report"""
@@ -189,7 +194,7 @@ rule sort:
         samtools index {output.sort}
         """
 
-rule calccoverage:
+rule bamCoverage:
     """compute coverage using deeptools into bigWig(bw) file"""
     input:
         bam="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bam",
@@ -197,11 +202,12 @@ rule calccoverage:
     output:
         "mapped/bws/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bw",
     params:
-        binsize="50"
+        binsize=BINSIZE,
+        extra=extra_params_bamCoverage,
     threads: 8
     shell:
         """
-        bamCoverage -b {input.bam} -o {output}  --binSize {params.binsize} -p {threads}
+        bamCoverage {params.extra} -b {input.bam} -o {output}  --binSize {params.binsize} -p {threads}
         """
 
 #%_fusedICv2_all.cov2cyt: %_fusedICv2_pe.bam
@@ -234,12 +240,13 @@ rule methylation_extractor:
         # chh="mapped/{sample}/CHH_context_{sample}_trim_bismark.deduplicated.sorted.txt.gz",
     params:
         ref=REFERENCE,
+        extra=extra_params_meth_extractor,
     threads: 4
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}.methylation_extractor.log",
     shell:
         """
-        bismark_methylation_extractor --gzip --paired-end --multicore {threads} --comprehensive --report --genome_folder {params.ref} --buffer_size 8G -s {input.bam} --output methylation_extracted 2> {log}
+        bismark_methylation_extractor {params.extra} --gzip --paired-end --multicore {threads}  --genome_folder {params.ref} -s {input.bam} --output methylation_extracted 2> {log}
         """
 
 rule bismark2bedGraph:
@@ -250,12 +257,14 @@ rule bismark2bedGraph:
     output:
         bedGraph="coverage/{sample}_MappedOn_{refbase}_{context}",
         cov=     "coverage/{sample}_MappedOn_{refbase}_{context}.gz.bismark.cov",
+    params:
+        extra=extra_params_bismark2bedGraph,
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}_{context}.bismark2bedGraph.log",
     shell:
         # gzip outfiles even without --gzip option. Need to unzip manual for later bigwiggle rule
         """
-        bismark2bedGraph --CX {input.methylex} -o {wildcards.sample}_MappedOn_{refbase}_{wildcards.context} --dir coverage 2> {log}
+        bismark2bedGraph {params.extra} --CX {input.methylex} -o {wildcards.sample}_MappedOn_{refbase}_{wildcards.context} --dir coverage 2> {log}
         gunzip {output.bedGraph}.gz
         gunzip {output.cov}.gz
         """
@@ -276,10 +285,11 @@ rule coverage2cytosine:
         "logs/bismark/{sample}_MappedOn_{refbase}_{context}.coverage2cytosine.log",
     params:
         ref=REFERENCE,
+        extra=extra_params_coverage2cytosine,
     shell:
         # genome_folder needs to contain fa rather than fasta!
         """
-        coverage2cytosine --CX --genome_folder {params.ref} -o {input.bedGraph} --dir . {input.bedGraph} 2> {log}
+        coverage2cytosine {params.extra} --genome_folder {params.ref} -o {input.bedGraph} --dir . {input.bedGraph} 2> {log}
         """
 
 rule bedGraphToBigWig:

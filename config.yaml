@@ -1,25 +1,24 @@
 THREADS: 4
 FILTER:
   # adapter: AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC
-  params_trim:
+  extra_params_trim:
+  # example for trimming 10bp off 5'
+  # extra_params_trim: --clip_R2 10 --clip_R1 10
+
 MAPPING:
-  params_bismark:
+  # this folder must contain the bismark index, i.e. a folder "Bisulfite_Genome" 
+  # along with the fa file it was build from (e.g. chloroplast.fa)
   reference: "data/index/"
   # used as short version to name output filnames for mapping
+  # this should ideally be the filename (e.g. chloroplast.fa) without .fa extension
   reference_short: "chloroplast"
+  extra_params_bismark:
+  # example to relax mapping
+  # extra_params_bismark: " --score_min L,0,-0.4 --un"
 
-# AGATCGGAAGAGC
-
-# Changed the Illumina small RNA sequence used for auto-detection to 'TGGAATTCTCGG' (from formerly 'ATGGAATTCTCG'). 
-# The reason for this is that smallRNA libraries have ssRNA adapters ligated to their -OH end, a signature of dicer cleavage, so there is no A-tailing involved. Thanks to Q. Gouil for bringing this to our attention
-# f ($nextera){
-# $adapter = 'CTGTCTCTTATA';
-# $adapter_name = 'Nextera Transposase sequence; user defined';
-# }
-# elsif($small_rna){
-# $adapter = 'TGGAATTCTCGG';
-# $adapter_name = 'Illumina small RNA adapter; user defined';
-# }
-# elsif($illumina){
-# $adapter = 'AGATCGGAAGAGC';
-# $adapter_name = 'Illumina TruSeq, Sanger iPCR; user defined';
+REPORT:
+  binsize:  50
+  extra_params_bamCoverage:
+  extra_params_meth_extractor:  " --comprehensive --report --buffer_size 8G"
+  extra_params_bismark2bedGraph:
+  extra_params_coverage2cytosine: " --CX"
