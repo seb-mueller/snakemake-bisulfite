@@ -312,7 +312,7 @@ rule bedGraphToBigWig:
         # samtools faidx input.fa
         # cut -f1,2 input.fa.fai > sizes.genome
         """
-        sed 1d {input.bedGraph} | sort -k1,1 -k2,2n > {input.bedGraph}_sorted
+        sed 1d {input.bedGraph} | LC_COLLATE=C sort -k1,1 -k2,2n > {input.bedGraph}_sorted
         bedGraphToBigWig {input.bedGraph}_sorted {params.ref}/{refbase}.fa.fai {output} 2> {log}
         rm {input.bedGraph}_sorted
         """
