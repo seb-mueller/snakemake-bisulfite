@@ -1,8 +1,8 @@
 # snakemake-bisulfite
 Pipeline for BS-Seq data based on snakemake
 
-# Automated workflow for small RNA sequence data
-Snakemake workflow for processing small RNA-seq libaries produced by Illumina small sequencing kits.
+# Automated workflow for WGBS data
+Snakemake workflow for processing BS-seq libaries produced by Illumina bisulfite sequencing kits.
 
 # Requirments
 - demultiplex fastq files in located in `data` directory. They need to be in the form `{sample}_R1.fastq.gz`
