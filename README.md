@@ -32,12 +32,12 @@ conda env create --file environment.yaml --name bsseq_pipeline
 # activate
 
 ```
-source activate bsseq_pipeline
+conda activate bsseq_pipeline
 ```
 To `deactivate` the environment, run:
 
 ```
-source deactivate
+conda deactivate
 ```
 # Genome preparation:
 
@@ -57,6 +57,13 @@ To let the pipeline know where the index is located, change the `config.yaml`:
   reference: "ref/genome/"
   reference_short: "mygenome"
 ```
+
+Also, the fasta-index is required at some point and should be generated in the same directory as follows:
+
+```
+samtools faidx mygenome.fa
+```
+
 
 # Usage:
 
