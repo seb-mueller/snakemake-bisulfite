@@ -1,3 +1,13 @@
+#' ---
+#' title:  bismark_cov_meth_rate_per_chromosome.py
+#' author: Sebastian Mueller (sebm_at_posteo.de)
+#' date:   2019-03-28
+#' details: script that takes bismark.cov files and calculates % methylation
+#' for each chromosome (stdout). In particalar useful to assess conversion rates, e.g. for
+#' plants add chloroplast or lambda phage to reference and calculate conversion rate for it
+#' using this script.
+#' ---
+
 import argparse
 import csv
 parser = argparse.ArgumentParser()
