@@ -80,7 +80,8 @@ rule all:
 
         expand("coverage/{sample}_MappedOn_" + refbase + "_{context}", sample=SAMPLES.index, context=CONTEXT),
         expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.gz.bismark.cov", sample=SAMPLES.index, context=CONTEXT),
-        expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.CX_report.txt", sample=SAMPLES.index, context=CONTEXT),
+        # this rule is buggy, CX_report.txt seems only to contain 0s, deactivated for now.
+        # expand("coverage/{sample}_MappedOn_" + refbase + "_{context}.CX_report.txt", sample=SAMPLES.index, context=CONTEXT),
         expand("coverage/bws/{sample}_MappedOn_" + refbase + "_{context}.bw", sample=SAMPLES.index, context=CONTEXT),
 
 
@@ -91,6 +92,10 @@ rule all:
 rule map:
     input:
         expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.bam", sample=SAMPLES.index),
+
+rule trim:
+    input:
+        expand("trimmed/{sample}_{pair}_trim.fq.gz", sample=SAMPLES.index, pair = PAIRS),
 
 rule fastqc_raw:
     """Create fastqc report"""
@@ -111,27 +116,23 @@ rule fastqc_raw:
         """
 
 # https://cutadapt.readthedocs.io/en/stable/guide.html#bisulfite-sequencing-rrbs
-rule trim:
+rule trim_individual:
     input:
         read1="data/{sample}_" + PAIRS[0] + ".fastq.gz",
         read2="data/{sample}_" + PAIRS[1] + ".fastq.gz",
-    # params:
-    #     " -a " +     config['FILTER']['cutadapt']['adapter'] +
-    #     " -q " + str(config['FILTER']['cutadapt']['quality-filter']) +
-    #     " -m " + str(config['FILTER']['cutadapt']['minimum-length']) +
-    #     " -M " + str(config['FILTER']['cutadapt']['maximum-length'])
     log:
-        "logs/cutadapt/{sample}_{pair}.log"
-    params:
-        extra=extra_params_trim,
+        log1="{sample}_" + PAIRS[0] + ".fastq.gz_trimming_report.txt",
+        log2="{sample}_" + PAIRS[1] + ".fastq.gz_trimming_report.txt",
     output:
         # trim_galore alway seems to output fq indpendent of fq|fastq input
-        read="trimmed/{sample}_{pair}_trim.fq.gz",
-        # l1="trimmed/{sample}.fastq.gz_trimming_report.txt",
+        read1="trimmed/{sample}_" + PAIRS[0] + "_trim.fq.gz",
+        read2="trimmed/{sample}_" + PAIRS[1] + "_trim.fq.gz",
     shell:
         """
-        trim_galore {params.extra} --paired --trim1 {input.read1} {input.read2} --output_dir trimmed
-        rename 's/val_[12]/trim/g' trimmed/*
+        trim_galore {extra_params_trim} --paired --trim1 {input.read1} {input.read2} --output_dir trimmed
+        rename 's/val_[12]/trim/g' trimmed/{wildcards.sample}*
+        mv  trimmed/{log.log1} logs/trim/
+        mv  trimmed/{log.log2} logs/trim/
         """
 
 # trim_galore [options] <filename(s)>
@@ -154,17 +155,17 @@ rule bismark:
         # se="mapped/{sample}/{sample}_trimmed_bismark_SE_report.txt",
         # nuc="mapped/{sample}/{sample}_trimmed_bismark.nucleotide_stats.txt",
     log:
-        "logs/bismark/{sample}_MappedOn_{refbase}.log",
-    params:
-        ref=REFERENCE,
-        extra=extra_params_bismark,
+        log1="logs/bismark/{sample}_MappedOn_{refbase}.log",
+        log2="logs/bismark/{sample}_MappedOn_{refbase}_trim_bismark_PE_report.txt",
+        log3="logs/bismark/{sample}_MappedOn_{refbase}_trim_bismark_pe.nucleotide_stats.txt",
     threads: 4
     shell:
         # USAGE: bismark [options] <genome_folder> {-1 <mates1> -2 <mates2> | <singles>}
         """
-        bismark {params.extra} --bowtie2 -p {threads} --nucleotide_coverage {params.ref} -1 {input.read1} -2 {input.read2} --basename {wildcards.sample}_MappedOn_{refbase}_trim_bismark --output_dir mapped 2> {log}
+        bismark {extra_params_bismark} --bowtie2 -p {threads} --nucleotide_coverage {REFERENCE} -1 {input.read1} -2 {input.read2} --basename {wildcards.sample}_MappedOn_{refbase}_trim_bismark --output_dir mapped 2> {log.log1}
+        mv mapped/{wildcards.sample}_MappedOn_{refbase}_trim_bismark_PE_report.txt {log.log2}
+        mv mapped/{wildcards.sample}_MappedOn_{refbase}_trim_bismark_pe.nucleotide_stats.txt {log.log3}
         """
-        # mapped/{wildcards.sample}
 
 
 rule deduplicate:
@@ -269,6 +270,7 @@ rule bismark2bedGraph:
         gunzip {output.cov}.gz
         """
 
+# this rule is buggy, CX_report.txt seems only to contain 0s, deactivated for now.
 rule coverage2cytosine:
     # generates a cytosine methylation report for a genome of interest and a sorted methylation input file produced
     # by the script bismark2bedGraph or the bismark_methylation_extractor when '--bedGraph' was specified. The input files
