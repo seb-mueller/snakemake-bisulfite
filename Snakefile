@@ -97,6 +97,18 @@ rule trim:
     input:
         expand("trimmed/{sample}_{pair}_trim.fq.gz", sample=SAMPLES.index, pair = PAIRS),
 
+rule sort:
+    input:
+        expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.bam", sample=SAMPLES.index),
+
+rule bamCoverage:
+    input:
+        expand("mapped/bws/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.deduplicated.sorted.bw", sample=SAMPLES.index),
+
+rule bw:
+    input:
+        expand("coverage/bws/{sample}_MappedOn_" + refbase + "_{context}.bw", sample=SAMPLES.index, context=CONTEXT),
+
 rule fastqc_raw:
     """Create fastqc report"""
     input:
@@ -183,7 +195,7 @@ rule deduplicate:
         deduplicate_bismark --paired --bam {input.bam} --output_dir mapped 2> {log}
         """
 
-rule sort:
+rule sort_individual:
     input:
         bam="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.bam",
     output:
@@ -195,7 +207,7 @@ rule sort:
         samtools index {output.sort}
         """
 
-rule bamCoverage:
+rule bamCoverage_individual:
     """compute coverage using deeptools into bigWig(bw) file"""
     input:
         bam="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bam",
