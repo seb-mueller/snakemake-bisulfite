@@ -143,6 +143,7 @@ rule trim_individual:
         """
         trim_galore {extra_params_trim} --paired --trim1 {input.read1} {input.read2} --output_dir trimmed
         rename 's/val_[12]/trim/g' trimmed/{wildcards.sample}*
+        mkdir -p logs/trim
         mv  trimmed/{log.log1} logs/trim/
         mv  trimmed/{log.log2} logs/trim/
         """
