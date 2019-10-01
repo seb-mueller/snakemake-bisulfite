@@ -1,8 +1,14 @@
 # snakemake-bisulfite
-Pipeline for BS-Seq data based on snakemake
+Automatic pipeline for genome wide DNA methylome processing data based on snakemake
 
-# Automated workflow for WGBS data
+# Automated workflow for WGBS and EM-Seq (NEB) data
 Snakemake workflow for processing BS-seq libaries produced by Illumina bisulfite sequencing kits.
+
+Supported protocols:
+- [**WGBS**](https://en.wikipedia.org/wiki/Bisulfite_sequencing)
+- [NEBNext Enzymatic Methyl-seq **(EM-seq)**](https://international.neb.com/about-neb/news-and-press-releases/new-england-biolabs-to-present-latest-innovations-for-ngs-sample-preparation-at-agbt-2017)
+
+Note, both WGBS and EM-seq produce the same kind of data, so no adjustment for postprocessing needed.
 
 # Requirments
 - demultiplex fastq files in located in `data` directory. They need to be in the form `{sample}_R1.fastq.gz`
@@ -275,4 +281,30 @@ Below is the structure of all generated files once the pipeline is finished:
 ```
 git pull
 conda env update --file environment.yaml --name bsseq_pipeline
+```
+# Post processing
+
+Results can be imported in various software packages such as [https://github.com/al2na/methylKit](https://github.com/al2na/methylKit) using the R-snippet below. 
+Note, here all 3 context are considered seperately which can by useful for example for anyalysing plant DNA-metyhylation.
+The imported files are `*.gz.bismark.cov` from the `coverage` folder:
+
+```r
+dir_base <- "/mypath..." # set this as base path manually!
+
+meta.data <- read_csv(file.path( dir_base, "samples.csv"))
+config    <- read_yaml(file.path(dir_base, "config.yaml"))
+genome_suffix <- config$MAPPING$reference_short
+dir_files <- file.path(dir_base, "coverage")
+
+contexts <- c("CpG", "CHG", "CHH")
+for (context in contexts) {
+  fls_cov_short <- paste(meta.data$library, "_MappedOn_", genome_suffix, "_", context, ".gz.bismark.cov", sep = "")
+  fls_cov <- file.path(dir_files, fls_cov_short)
+  myobj <- methRead(as.list(fls_cov), as.list(as.character(meta.data$library)), "assembly", dbtype = NA,
+                    pipeline = "bismarkCoverage", header = FALSE, skip = 0, sep = "\t",
+                    context = context, resolution = "base",
+                    treatment = as.integer(as.factor(meta.data$condition)), dbdir = getwd(),
+                    mincov = 1)
+  # ...
+}
 ```
