@@ -23,8 +23,14 @@ extra_params_meth_extractor    = config['REPORT']['extra_params_meth_extractor']
 extra_params_bismark2bedGraph  = config['REPORT']['extra_params_bismark2bedGraph']
 extra_params_coverage2cytosine = config['REPORT']['extra_params_coverage2cytosine']
 
+# input file parameters
+r1_suffix = config["Fastq"]["suffix_R1"]
+r2_suffix = config["Fastq"]["suffix_R2"]
+fastq_ext = config["Fastq"]["file_extension"]
+
+
 CONTEXT = ['CpG','CHG','CHH']
-PAIRS = ['R1', 'R2']
+PAIRS = [r1_suffix, r2_suffix]
 
 # Get sample names from samples.csv
 SAMPLES = pd.read_table("samples.csv", header=0, sep=',', index_col=0)
@@ -122,6 +128,7 @@ rule fastqc_raw:
         # zip1= "logs/fastqc/raw/{sample}_R1_fastqc.zip",
         # zip2= "logs/fastqc/raw/{sample}_R2_fastqc.zip",
     # log: "logs"
+    conda: "environment.yaml"
     shell:
         """
         fastqc {input.read} -f fastq --outdir logs/fastqc/raw
@@ -135,10 +142,13 @@ rule trim_individual:
     log:
         log1="{sample}_" + PAIRS[0] + ".fastq.gz_trimming_report.txt",
         log2="{sample}_" + PAIRS[1] + ".fastq.gz_trimming_report.txt",
+    benchmark:
+        "{sample}_" + PAIRS[0] + ".fastq.gz_trimming_report.benchmark",
     output:
         # trim_galore alway seems to output fq indpendent of fq|fastq input
         read1="trimmed/{sample}_" + PAIRS[0] + "_trim.fq.gz",
         read2="trimmed/{sample}_" + PAIRS[1] + "_trim.fq.gz",
+    conda: "environment.yaml"
     shell:
         """
         trim_galore {extra_params_trim} --paired --trim1 {input.read1} {input.read2} --output_dir trimmed
@@ -171,7 +181,10 @@ rule bismark:
         log1="logs/bismark/{sample}_MappedOn_{refbase}.log",
         log2="logs/bismark/{sample}_MappedOn_{refbase}_trim_bismark_PE_report.txt",
         log3="logs/bismark/{sample}_MappedOn_{refbase}_trim_bismark_pe.nucleotide_stats.txt",
+    benchmark:
+        "logs/bismark/{sample}_MappedOn_{refbase}_bismark.benchmark",
     threads: 4
+    conda: "environment.yaml"
     shell:
         # USAGE: bismark [options] <genome_folder> {-1 <mates1> -2 <mates2> | <singles>}
         """
@@ -191,6 +204,9 @@ rule deduplicate:
         # dup="mapped/{sample}/{sample}_trim_bismark.deduplication_report.txt",
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}.deduplication.log",
+    benchmark:
+        "logs/bismark/{sample}_MappedOn_{refbase}.deduplication.benchmark",
+    conda: "environment.yaml"
     shell:
         """
         deduplicate_bismark --paired --bam {input.bam} --output_dir mapped 2> {log}
@@ -202,6 +218,7 @@ rule sort_individual:
     output:
         sort="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bam",
         index="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bam.bai",
+    conda: "environment.yaml"
     shell:
         """
         samtools sort {input.bam} > {output.sort}
@@ -215,10 +232,15 @@ rule bamCoverage_individual:
         bai="mapped/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bam.bai",
     output:
         "mapped/bws/{sample}_MappedOn_{refbase}_trim_bismark_pe.deduplicated.sorted.bw",
+    conda: "environment.yaml"
     params:
         binsize=BINSIZE,
         extra=extra_params_bamCoverage,
     threads: 8
+    log:
+        "logs/bismark/{sample}_MappedOn_{refbase}.bamCoverage_individual.log",
+    benchmark:
+        "logs/bismark/{sample}_MappedOn_{refbase}.bamCoverage_individual.benchmark",
     shell:
         """
         bamCoverage {params.extra} -b {input.bam} -o {output}  --binSize {params.binsize} -p {threads}
@@ -252,12 +274,15 @@ rule methylation_extractor:
         # cg="mapped/{sample}/CpG_context_{sample}_trim_bismark.deduplicated.sorted.txt.gz",
         # chg="mapped/{sample}/CHG_context_{sample}_trim_bismark.deduplicated.sorted.txt.gz",
         # chh="mapped/{sample}/CHH_context_{sample}_trim_bismark.deduplicated.sorted.txt.gz",
+    conda: "environment.yaml"
     params:
         ref=REFERENCE,
         extra=extra_params_meth_extractor,
     threads: 4
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}.methylation_extractor.log",
+    benchmark:
+        "logs/bismark/{sample}_MappedOn_{refbase}.methylation_extractor.benchmark",
     shell:
         """
         bismark_methylation_extractor {params.extra} --gzip --paired-end --multicore {threads}  --genome_folder {params.ref} -s {input.bam} --output methylation_extracted 2> {log}
@@ -275,6 +300,9 @@ rule bismark2bedGraph:
         extra=extra_params_bismark2bedGraph,
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}_{context}.bismark2bedGraph.log",
+    benchmark:
+        "logs/bismark/{sample}_MappedOn_{refbase}_{context}.bismark2bedGraph.benchmark",
+    conda: "environment.yaml"
     shell:
         # gzip outfiles even without --gzip option. Need to unzip manual for later bigwiggle rule
         """
@@ -298,9 +326,12 @@ rule coverage2cytosine:
         cov2cyt="coverage/{sample}_MappedOn_{refbase}_{context}.CX_report.txt",
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}_{context}.coverage2cytosine.log",
+    benchmark:
+        "logs/bismark/{sample}_MappedOn_{refbase}_{context}.coverage2cytosine.benchmark",
     params:
         ref=REFERENCE,
         extra=extra_params_coverage2cytosine,
+    conda: "environment.yaml"
     shell:
         # genome_folder needs to contain fa rather than fasta!
         """
@@ -320,8 +351,11 @@ rule bedGraphToBigWig:
         bw="coverage/bws/{sample}_MappedOn_{refbase}_{context}.bw",
     log:
         "logs/bismark/{sample}_MappedOn_{refbase}_{context}.bedGraphToBigWig.log",
+    benchmark:
+        "logs/bismark/{sample}_MappedOn_{refbase}_{context}.bedGraphToBigWig.benchmark",
     params:
         ref=REFERENCE,
+    conda: "environment.yaml"
     shell:
         # fai files needs to be present to serve as chrom.sizes and can be created by:
         # samtools faidx input.fa
@@ -331,6 +365,9 @@ rule bedGraphToBigWig:
         bedGraphToBigWig {input.bedGraph}_sorted {params.ref}/{refbase}.fa.fai {output} 2> {log}
         rm {input.bedGraph}_sorted
         """
+
+onstart:
+        shell("ulimit -n 10240")
 
 	# ${bismark_dir}coverage2cytosine --genome_folder ${index_bismarck} --CX -o $*_fusedICv2_all.cov2cyt $*_fusedICv2_all.bedgraph.gz.bismark.cov.gz
 

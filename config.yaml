@@ -1,7 +1,7 @@
 THREADS: 4
 FILTER:
   # adapter: AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC
-  extra_params_trim:
+  extra_params_trim: ""
   # example for trimming 10bp off 5'
   # extra_params_trim: --clip_R2 10 --clip_R1 10
 
@@ -18,7 +18,11 @@ MAPPING:
 
 REPORT:
   binsize:  50
-  extra_params_bamCoverage:
+  extra_params_bamCoverage: ""
   extra_params_meth_extractor:  " --comprehensive --report --buffer_size 8G"
-  extra_params_bismark2bedGraph:
+  extra_params_bismark2bedGraph: ""
   extra_params_coverage2cytosine: " --CX"
+Fastq:
+  suffix_R1: R1
+  suffix_R2: R2
+  file_extension: fastq.gz
