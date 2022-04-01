@@ -303,12 +303,14 @@ rule bismark2bedGraph:
     benchmark:
         "logs/bismark/{sample}_MappedOn_{refbase}_{context}.bismark2bedGraph.benchmark",
     conda: "environment.yaml"
+    threads: 4
     shell:
         # gzip outfiles even without --gzip option. Need to unzip manual for later bigwiggle rule
         """
+        ulimit -n 10240
         bismark2bedGraph {params.extra} --CX {input.methylex} -o {wildcards.sample}_MappedOn_{refbase}_{wildcards.context} --dir coverage 2> {log}
-        gunzip {output.bedGraph}.gz
-        gunzip {output.cov}.gz
+        pigz -p {threads} -d {output.bedGraph}.gz
+        pigz -p {threads} -d {output.cov}.gz
         """
 
 # this rule is buggy, CX_report.txt seems only to contain 0s, deactivated for now.
@@ -361,14 +363,21 @@ rule bedGraphToBigWig:
         # samtools faidx input.fa
         # cut -f1,2 input.fa.fai > sizes.genome
         """
+        ulimit -n 10240
         sed 1d {input.bedGraph} | LC_COLLATE=C sort -k1,1 -k2,2n > {input.bedGraph}_sorted
         bedGraphToBigWig {input.bedGraph}_sorted {params.ref}/{refbase}.fa.fai {output} 2> {log}
         rm {input.bedGraph}_sorted
         """
 
 onstart:
-        shell("ulimit -n 10240")
+    shell("ulimit -n 10240")
 
+onsuccess:
+    shell("ulimit -n ")
+
+onerror:
+    shell("ulimit -n ")
+    print("\n !!! ERROR in index creation workflow! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
 	# ${bismark_dir}coverage2cytosine --genome_folder ${index_bismarck} --CX -o $*_fusedICv2_all.cov2cyt $*_fusedICv2_all.bedgraph.gz.bismark.cov.gz
 
 	# gunzip $*_fusedICv2_CHG.bedgraph.gz $*_fusedICv2_CpG.bedgraph.gz $*_fusedICv2_CHH.bedgraph.gz
