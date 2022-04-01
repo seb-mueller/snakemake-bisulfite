@@ -33,7 +33,8 @@ CONTEXT = ['CpG','CHG','CHH']
 PAIRS = [r1_suffix, r2_suffix]
 
 # Get sample names from samples.csv
-SAMPLES = pd.read_table("samples.csv", header=0, sep=',', index_col=0)
+SAMPLES = pd.read_table(config["sample-file"], header=0, sep=',', index_col=0)
+raw_data_dir = config["rawdata-dir"]
 # an alternative approach would be globing for filenames (but I like specifying files more):
 # SAMPLES = glob_wildcards("data/{S}_R1.fastq.gz").S
 print(REFERENCE)
@@ -56,6 +57,7 @@ rule all:
         expand("trimmed/{sample}_{pair}_trim.fq.gz", sample=SAMPLES.index, pair = PAIRS),
         # QC
         expand("logs/fastqc/raw/{sample}_{pair}_fastqc.html", sample=SAMPLES.index, pair = PAIRS),
+        expand("logs/fastqc/trimmed/{sample}_{pair}_trim_fastqc.html", sample=SAMPLES.index, pair = PAIRS),
         # bismark mapping
         # expand("mapped/{sample}_MappedOn_" + refbase +"_trim_bismark_pe.bam", sample=SAMPLES.index),
         # deduplication
@@ -115,10 +117,44 @@ rule bw:
     input:
         expand("coverage/bws/{sample}_MappedOn_" + refbase + "_{context}.bw", sample=SAMPLES.index, context=CONTEXT),
 
+rule fasta_fastq_adapter:
+    input:
+        fa=config['adapter-file']
+    output:
+        tsv="config/fastqc_adapter.tsv"
+    conda: "environment.yaml"
+    script:
+        "scripts/fa2tsv.py"
+
+
+rule fastqc_trim:
+    """Create fastqc report"""
+    input:
+        read="trimmed/{sample}_{pair}_trim.fq.gz",
+        adapters="config/fastqc_adapter.tsv",
+        # read1="data/{sample}_{pair}.fastq.gz",
+        # read2="data/{sample}_R2.fastq.gz",
+    output:
+        qual="logs/fastqc/trimmed/{sample}_{pair}_trim_fastqc.html",
+        zip ="logs/fastqc/trimmed/{sample}_{pair}_trim_fastqc.zip",
+        # qual2="logs/fastqc/raw/{sample}_R2_fastqc.html",
+        # zip1= "logs/fastqc/raw/{sample}_R1_fastqc.zip",
+        # zip2= "logs/fastqc/raw/{sample}_R2_fastqc.zip",
+    # log: "logs"
+    resources:
+         mem_mb="2000MB"
+    conda: "environment.yaml"
+    threads: 2
+    shell:
+        """
+        fastqc {input.read} -a {input.adapters} -t {threads} -f fastq --outdir logs/fastqc/trimmed
+        """
+
 rule fastqc_raw:
     """Create fastqc report"""
     input:
-        read="data/{sample}_{pair}.fastq.gz",
+        read= raw_data_dir + "/{sample}_{pair}.fastq.gz",
+        adapters="config/fastqc_adapter.tsv",
         # read1="data/{sample}_{pair}.fastq.gz",
         # read2="data/{sample}_R2.fastq.gz",
     output:
@@ -128,17 +164,20 @@ rule fastqc_raw:
         # zip1= "logs/fastqc/raw/{sample}_R1_fastqc.zip",
         # zip2= "logs/fastqc/raw/{sample}_R2_fastqc.zip",
     # log: "logs"
+    resources:
+         mem_mb="2000MB"
     conda: "environment.yaml"
+    threads: 2
     shell:
         """
-        fastqc {input.read} -f fastq --outdir logs/fastqc/raw
+        fastqc {input.read} -a {input.adapters} -t {threads} -f fastq --outdir logs/fastqc/raw
         """
 
 # https://cutadapt.readthedocs.io/en/stable/guide.html#bisulfite-sequencing-rrbs
 rule trim_individual:
     input:
-        read1="data/{sample}_" + PAIRS[0] + ".fastq.gz",
-        read2="data/{sample}_" + PAIRS[1] + ".fastq.gz",
+        read1= raw_data_dir + "/{sample}_" + PAIRS[0] + ".fastq.gz",
+        read2= raw_data_dir + "/{sample}_" + PAIRS[1] + ".fastq.gz",
     log:
         log1="{sample}_" + PAIRS[0] + ".fastq.gz_trimming_report.txt",
         log2="{sample}_" + PAIRS[1] + ".fastq.gz_trimming_report.txt",
@@ -149,9 +188,10 @@ rule trim_individual:
         read1="trimmed/{sample}_" + PAIRS[0] + "_trim.fq.gz",
         read2="trimmed/{sample}_" + PAIRS[1] + "_trim.fq.gz",
     conda: "environment.yaml"
+    threads: 4
     shell:
         """
-        trim_galore {extra_params_trim} --paired --trim1 {input.read1} {input.read2} --output_dir trimmed
+        trim_galore {extra_params_trim} --cores {threads} --paired --trim1 {input.read1} {input.read2} --output_dir trimmed
         rename 's/val_[12]/trim/g' trimmed/{wildcards.sample}*
         mkdir -p logs/trim
         mv  trimmed/{log.log1} logs/trim/

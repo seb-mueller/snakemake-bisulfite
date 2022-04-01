@@ -1,9 +1,15 @@
-THREADS: 4
+rawdata-dir: data
+sample-file: config/samples.csv
+# location of the adapter file, ideally in a "config" folder together with this file (config.yaml)
+# the sequences in the adapter file are used to trim read2
+adapter-file: config/custom_adapters.fa
 FILTER:
   # adapter: AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC
   extra_params_trim: ""
   # example for trimming 10bp off 5'
   # extra_params_trim: --clip_R2 10 --clip_R1 10
+# can be relative or absolute
+
 
 MAPPING:
   # this folder must contain the bismark index, i.e. a folder "Bisulfite_Genome" 
@@ -20,7 +26,7 @@ REPORT:
   binsize:  50
   extra_params_bamCoverage: ""
   extra_params_meth_extractor:  " --comprehensive --report --buffer_size 8G"
-  extra_params_bismark2bedGraph: ""
+  extra_params_bismark2bedGraph: " --scaffolds --buffer_size 70%"
   extra_params_coverage2cytosine: " --CX"
 Fastq:
   suffix_R1: R1

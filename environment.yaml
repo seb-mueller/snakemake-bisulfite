@@ -13,3 +13,4 @@ dependencies:
   - cutadapt
   - ucsc-bedgraphtobigwig
   - deeptools>=3
+  - biopython=1.78
